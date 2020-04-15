@@ -1,2 +1,2 @@
 # Abc_web-server
-Abc web server
+The simplest web server for training.
