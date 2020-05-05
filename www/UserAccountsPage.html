@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Accounts</title>
+</head>
+<body>
+<h1>My accounts</h1>
+<table>
+    <thead>
+    <tr>
+        <td align="center">Account number</td>
+        <td align="center">Currency</td>
+        <td align="center">Amount</td>
+        <td></td>
+        <td>Action</td>
+    </tr>
+    </thead>
+    <tbody>
+    {begin account-row-template}
+    <tr class="account-row">
+        <td align="center">{number}</td>
+        <td align="center">{currency}</td>
+        <td align="center">{amount}</td>
+        <td><===></td>
+        <td>
+            <form method="POST" action="/user/accounts/action">
+                <input name="login" type="text" value="{username}" hidden>
+                <input name="account-number" value="{number}" hidden>
+                <input name="amount" type="text" size="10" placeholder="input amount" required>
+                <input type="radio" name="account-action" value="deposit" required>Deposit
+                <input type="radio" name="account-action" value="withdraw" required>Withdraw
+                <input type="submit" value="Submit">
+            </form>
+        </td>
+    </tr>
+    {end account-row-template}
+    </tbody>
+</table>
+</body>
+</html>

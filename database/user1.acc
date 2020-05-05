@@ -1,0 +1,10 @@
+{
+  "001": {
+    "currency": "RUB",
+    "amount": 100.50
+  },
+  "002": {
+    "currency": "USD",
+    "amount": 25.00
+  }
+}
