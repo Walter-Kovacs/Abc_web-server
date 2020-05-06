@@ -4,8 +4,17 @@
     <meta charset="UTF-8">
     <title>Accounts</title>
 </head>
-<body>
+<p>
 <h1>My accounts</h1>
+<p>
+<form method="POST" action="/user/accounts/create">
+    <input name="login" type="text" value="{username}" hidden>
+    <input type="radio" name="currency" value="RUB" required>RUB
+    <input type="radio" name="currency" value="USD" required>USD
+    <input type="radio" name="currency" value="EUR" required>EUR
+    <input type="submit" value="Create new account">
+</form>
+</p>
 <table>
     <thead>
     <tr>
