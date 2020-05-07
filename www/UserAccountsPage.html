@@ -5,7 +5,8 @@
     <title>Accounts</title>
 </head>
 <p>
-<h1>My accounts</h1>
+<h1>{username}: My accounts</h1>
+<button type="button"><a href="/">Sign out</a></button>
 <p>
 <form method="POST" action="/user/accounts/create">
     <input name="login" type="text" value="{username}" hidden>
@@ -36,7 +37,7 @@
             <form method="POST" action="/user/accounts/action">
                 <input name="login" type="text" value="{username}" hidden>
                 <input name="account-number" value="{number}" hidden>
-                <input name="amount" type="text" size="10" placeholder="input amount" required>
+                <input name="amount" type="text" size="10" placeholder="input amount" required autocomplete="off">
                 <input type="radio" name="account-action" value="deposit" required>Deposit
                 <input type="radio" name="account-action" value="withdraw" required>Withdraw
                 <input type="submit" value="Submit">

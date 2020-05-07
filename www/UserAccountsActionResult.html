@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Accounts action result</title>
+</head>
+<body>
+<h1>{username}</h1>
+Action result: <b>{result}</b>
+<p></p>
+<form method="GET" action="/user/">
+    <input name="login" type="text" value="{username}" hidden>
+    <input type="submit" value="Return">
+</form>
+</body>
+</html>

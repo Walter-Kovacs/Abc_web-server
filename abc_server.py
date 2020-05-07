@@ -16,10 +16,14 @@ class AbcHTTPRequestHandler(BaseHTTPRequestHandler):
 
     pages_path = "www"
     main_page_path = os.path.join(pages_path, "MainPage.html")
+
     user_accounts_page_path = os.path.join(pages_path, "UserAccountsPage.html")
     user_accounts_page_above_rows = None
     user_account_row_template = None
     user_accounts_page_below_rows = None
+
+    user_accounts_action_result_page_path = os.path.join(pages_path, "UserAccountsActionResult.html")
+    user_accounts_action_result_page = None
 
     request_user_login = "/user/?login="
 
@@ -81,10 +85,7 @@ class AbcHTTPRequestHandler(BaseHTTPRequestHandler):
             return
 
         # send result
-        if result_of_request_to_db == UserDatabaseHandler.REQUEST_RESULT_OK:
-            self.send_user_accounts(param_dict["login"])
-        else:
-            self.send_user_accounts_error_page(result_of_request_to_db)
+        self.send_user_accounts_action_result_page(param_dict['login'], result_of_request_to_db)
 
     def send_main_page(self):
         with open(self.main_page_path, 'rb') as main_page:
@@ -107,41 +108,56 @@ class AbcHTTPRequestHandler(BaseHTTPRequestHandler):
     def send_user_accounts(self, username):
         dbh = UserDatabaseHandler(username)
         user_accounts = dbh.get_user_accounts('r')
-        if user_accounts is not None:
-            if self.user_accounts_page_above_rows is None:
-                self.__init_user_accounts_template__()
+        if user_accounts is None:
+            dbh.create_new_user()
 
-            accounts_rows = ""
-            accounts_dict = json.load(user_accounts)
-            user_accounts.close()
-            for account_number in accounts_dict:
-                a_row = self.user_account_row_template.\
-                    replace("{number}", account_number).\
-                    replace("{currency}", accounts_dict[account_number]["currency"]).\
-                    replace("{amount}", str(accounts_dict[account_number]["amount"])).\
-                    replace("{username}", username)
-                accounts_rows += a_row + '\n'
+        if self.user_accounts_page_above_rows is None:
+            self.__init_user_accounts_template__()
 
-            response_body = \
-                self.user_accounts_page_above_rows.replace("{username}", username) \
-                + accounts_rows \
-                + self.user_accounts_page_below_rows
-            response_body = response_body.encode('utf-8')
-            response_body_stream = io.BytesIO()
-            response_body_stream.write(response_body)
-            response_body_stream.seek(0)
+        accounts_rows = ""
+        accounts_dict = json.load(user_accounts)
+        user_accounts.close()
+        for account_number in accounts_dict:
+            a_row = self.user_account_row_template.\
+                replace("{number}", account_number).\
+                replace("{currency}", accounts_dict[account_number]["currency"]).\
+                replace("{amount}", str(accounts_dict[account_number]["amount"])).\
+                replace("{username}", username)
+            accounts_rows += a_row + '\n'
 
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-Type", "text/html; charset=UTF-8")
-            self.send_header("Content-Length", str(len(response_body)))
-            self.end_headers()
-            shutil.copyfileobj(response_body_stream, self.wfile)
-        else:
-            self.send_error(HTTPStatus.NOT_FOUND)  # TODO: create account
+        response_body = \
+            self.user_accounts_page_above_rows.replace("{username}", username) \
+            + accounts_rows \
+            + self.user_accounts_page_below_rows
+        response_body = response_body.encode('utf-8')
+        response_body_stream = io.BytesIO()
+        response_body_stream.write(response_body)
+        response_body_stream.seek(0)
 
-    def send_user_accounts_error_page(self, result_of_request_to_db):
-        # TODO: replace sending INTERNAL_SERVER_ERROR of creating html page and send it
-        self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, message=result_of_request_to_db)
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/html; charset=UTF-8")
+        self.send_header("Content-Length", str(len(response_body)))
+        self.end_headers()
+        shutil.copyfileobj(response_body_stream, self.wfile)
+
+    def send_user_accounts_action_result_page(self, username, result_of_request_to_db):
+        if self.user_accounts_action_result_page is None:
+            with open(self.user_accounts_action_result_page_path, 'r') as file:
+                self.user_accounts_action_result_page = file.read()
+
+        response_body = self.user_accounts_action_result_page.\
+            replace("{username}", username).\
+            replace("{result}", result_of_request_to_db[1])
+        response_body = response_body.encode('utf-8')
+        response_body_stream = io.BytesIO()
+        response_body_stream.write(response_body)
+        response_body_stream.seek(0)
+
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/html; charset=UTF-8")
+        self.send_header("Content-Length", str(len(response_body)))
+        self.end_headers()
+        shutil.copyfileobj(response_body_stream, self.wfile)
 
 
 # TODO:
@@ -151,21 +167,31 @@ class UserDatabaseHandler:
     database_path = "database"
     index = os.path.join(database_path, "database.index")
 
-    REQUEST_RESULT_OK = 0
-    REQUEST_RESULT_ERROR_WRONG_REQUEST_OR_DATABASE_ERROR = 100
-    REQUEST_RESULT_ERROR_WRONG_REQUEST = 200
-    REQUEST_RESULT_ERROR_WRONG_REQUEST_INSUFFICIENT_FUNDS = 201
-    REQUEST_RESULT_ERROR_WRONG_REQUEST_UNSUPPORTED_ACTION = 202
-    REQUEST_RESULT_ERROR_DATABASE_ERROR = 300
+    REQUEST_RESULT_OK = (0, "Success")
+    REQUEST_RESULT_ERROR_WRONG_REQUEST_OR_DATABASE_ERROR = (100, "Wrong request or internal database error")
+    REQUEST_RESULT_ERROR_WRONG_REQUEST = (200, "Wrong request")
+    REQUEST_RESULT_ERROR_WRONG_REQUEST_INSUFFICIENT_FUNDS = (201, "Insufficient funds")
+    REQUEST_RESULT_ERROR_WRONG_REQUEST_UNSUPPORTED_ACTION = (202, "Unsupported action")
+    REQUEST_RESULT_ERROR_DATABASE_ERROR = (300, "Internal database error")
 
     def __init__(self, username):
         self.username = username
+
+    def create_new_user(self):
+        user_accounts_path = self.username + ".acc"
+        user_index = [self.username, user_accounts_path]
+        with open(self.index, 'a') as index_file:
+            csv.writer(index_file).writerow(user_index)
+        with open(os.path.join(self.database_path, user_accounts_path), 'w') as account_file:
+            empty_dict = {}
+            json.dump(empty_dict, account_file)
 
     def get_user_accounts_path(self):
         """
         Search the path to the user accounts info file from database index file. Return path or None.
         :return: path or empty string
         """
+        file_path = ""
         with open(self.index, 'r') as index_file:
             for row in csv.reader(index_file):
                 if row[0] == self.username:
@@ -184,7 +210,7 @@ class UserDatabaseHandler:
         :return: file object or None
         """
         file_path = self.get_user_accounts_path()
-        if file_path is not None:
+        if file_path != "":
             return open(file_path, mode)
         else:
             return None
